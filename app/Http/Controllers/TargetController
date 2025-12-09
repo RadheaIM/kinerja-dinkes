@@ -1,0 +1,33 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Models\TargetSasaran; // Model yang baru dibuat
+use Illuminate\Support\Facades\Auth;
+
+class TargetController extends Controller
+{
+    /**
+     * Mengambil Target Sasaran berdasarkan ID Puskesmas.
+     * Digunakan oleh AJAX/frontend.
+     */
+    public function getTargetsByPuskesmas($puskesmasId)
+    {
+        // Pilihan: Tambahkan otorisasi di sini jika Anda ingin memastikan
+        // hanya user tertentu (meskipun sudah auth) yang boleh fetch data ini.
+        // if (!Auth::check()) {
+        //     return response()->json(['error' => 'Unauthenticated.'], 401);
+        // }
+        
+        // Ambil data target sasaran dari database berdasarkan ID Puskesmas
+        // dan filter berdasarkan tahun saat ini (misalnya)
+        $targets = TargetSasaran::where('puskesmas_id', $puskesmasId)
+                                ->where('tahun', date('Y')) // Asumsi target berlaku untuk tahun ini
+                                ->pluck('target_tahunan', 'indikator_key') 
+                                ->toArray();
+
+        // Format data yang dikembalikan: ['ibu_hamil' => 90, 'balita' => 95, ...]
+        return response()->json($targets);
+    }
+}

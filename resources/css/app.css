@@ -1,0 +1,77 @@
+/* ==================================== */
+/* 1. FONT MODERN (Ganti sesuai pilihan Anda) */
+/* Pastikan Anda sudah mengimpor Google Font di file utama atau di tag <head> */
+/* Contoh: Poppins */
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: #f4f7f6; /* Background lembut */
+}
+
+/* ==================================== */
+/* 2. KARTU LOGIN MODERN (modern-card) */
+.modern-card {
+    background-color: #ffffff;
+    border-radius: 20px; /* Sudut sangat melengkung */
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1); /* Bayangan yang menonjol */
+    padding: 40px; /* Ruang dalam yang lega */
+    border: none; /* Hilangkan border Bootstrap default */
+    margin-top: 10vh; /* Posisikan lebih rendah dari atas */
+}
+
+/* 3. JUDUL (modern-header) */
+.modern-card .modern-header {
+    background: none; /* Hilangkan background default card-header */
+    border-bottom: none;
+    text-align: center;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #34495e; /* Warna teks gelap */
+    padding-bottom: 25px;
+}
+
+/* ==================================== */
+/* 4. INPUT FIELD */
+.modern-card .form-control {
+    border-radius: 10px;
+    padding: 12px 15px;
+    border: 1px solid #e0e0e0;
+    transition: border-color 0.3s;
+}
+
+.modern-card .form-control:focus {
+    border-color: #3498db; /* Warna fokus */
+    box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
+}
+
+/* ==================================== */
+/* 5. TOMBOL LOGIN (modern-btn) */
+.modern-btn {
+    padding: 12px 20px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    border-radius: 10px;
+    background-color: #3498db !important; /* Biru yang lebih modern */
+    border-color: #3498db !important;
+    transition: background-color 0.3s;
+}
+
+.modern-btn:hover {
+    background-color: #2980b9 !important;
+    border-color: #2980b9 !important;
+}
+
+/* 6. LINK TAMBAHAN */
+.link-forgot, .link-register {
+    font-size: 0.9rem;
+    color: #7f8c8d;
+}
+
+.link-register:hover {
+    color: #3498db;
+    text-decoration: underline;
+}
+
+/* Jika Anda menggunakan sidebar (dari gambar Anda sebelumnya), */
+/* pastikan Anda men-disable atau menyembunyikannya di halaman ini */
+/* dengan menyesuaikan layout blade utama Anda. */
+/* ==================================== */

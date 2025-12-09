@@ -1,5 +1,4 @@
 <?php
-// File: app/Models/SasaranPuskesmas.php
 
 namespace App\Models;
 
@@ -9,21 +8,18 @@ use Illuminate\Database\Eloquent\Model;
 class SasaranPuskesmas extends Model
 {
     use HasFactory;
-    protected $table = 'sasaran_puskesmas';
-    public $timestamps = false; // Tabel kita tidak pakai created_at
 
-    /**
-     * ==================================================================
-     * === INI PERBAIKANNYA ===
-     * ==================================================================
-     * Daftar $fillable harus SAMA PERSIS dengan tabel SQL yang baru dibuat
-     */
+    // WAJIB: Mematikan fitur timestamps (created_at dan updated_at) 
+    // karena tabel sasaran_puskesmas tidak memilikinya.
+    public $timestamps = false; 
+
     protected $fillable = [
-        'puskesmas',
-        'bumil',
-        'bulin',
+        'puskesmas', 
+        'tahun',
+        'bumil', 
+        'bulin', 
         'bbl',
-        'balita_ds', // <-- NAMA KOLOM YANG BENAR (SESUAI DB ANDA)
+        'balita_ds',
         'pendidikan_dasar',
         'uspro',
         'lansia',
@@ -33,5 +29,6 @@ class SasaranPuskesmas extends Model
         'tb',
         'hiv',
         'idl',
+        // ... kolom lain yang diimpor
     ];
 }

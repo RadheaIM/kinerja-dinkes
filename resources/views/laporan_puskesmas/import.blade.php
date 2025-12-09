@@ -31,16 +31,38 @@
                     <div class="alert alert-danger">{{ session('error') }}</div>
                 @endif
 
+                {{-- PESAN PERINGATAN DIPERBARUI --}}
                 <div class="alert alert-warning">
-                    <strong>Perhatian!</strong> Meng-import file baru akan **MENGHAPUS SEMUA** data sasaran puskesmas yang lama dan menggantinya dengan data dari file ini.
+                    <strong>Perhatian!</strong> Meng-import file baru akan **MENGHAPUS** data sasaran puskesmas yang lama. **HANYA untuk Tahun yang dipilih di bawah**, dan menggantinya dengan data dari file ini.
                 </div>
 
-                {{-- 
-                Form ini akan dikirim ke route('laporan-puskesmas.import')
-                yang ditangani oleh fungsi 'import' di SasaranPuskesmasController
-                --}}
+                {{-- Form ini akan dikirim ke route('laporan-puskesmas.import') --}}
                 <form method="POST" action="{{ route('laporan-puskesmas.import') }}" enctype="multipart/form-data">
                     @csrf
+
+                    {{-- ========================================================== --}}
+                    {{-- === TAMBAHAN BARU: DROP DOWN PILIH TAHUN IMPORT === --}}
+                    {{-- ========================================================== --}}
+                    <div class="mb-3">
+                        <label for="tahun_import" class="form-label font-weight-bold">Pilih Tahun Sasaran Data <span class="text-danger">*</span></label>
+                        <select name="tahun_import" id="tahun_import" class="form-select @error('tahun_import') is-invalid @enderror" required>
+                            <option value="">-- Pilih Tahun --</option>
+                            
+                            @php
+                                $currentYear = date('Y');
+                                $startYear = $currentYear - 3; // Mulai dari 3 tahun ke belakang
+                                $endYear = $currentYear + 10; // Sampai 10 tahun ke depan
+                            @endphp
+
+                            @for ($y = $endYear; $y >= $startYear; $y--)
+                                <option value="{{ $y }}" {{ old('tahun_import') == $y ? 'selected' : '' }}>{{ $y }}</option>
+                            @endfor
+                        </select>
+                        @error('tahun_import')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                    </div>
+                    {{-- ========================================================== --}}
 
                     <div class="mb-3">
                         <label for="file" class="form-label">Pilih File Excel (.xlsx, .xls) <span class="text-danger">*</span></label>

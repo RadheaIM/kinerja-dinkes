@@ -7,165 +7,212 @@
 
     <title>@yield('title', 'Kinerja Dinkes') | Kinerja Dinkes</title>
 
-    <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 
-    {{-- Font Google (Opsional) --}}
+    {{-- Font Google --}}
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
-    {{-- Muat CSS dan JS yang sudah di-compile oleh Vite (termasuk Bootstrap JS) --}}
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-
+    {{-- Muat CSS yang sudah di-compile oleh Vite --}}
+    @vite(['resources/css/app.css'])
 
     <style>
+        /* Tentukan tinggi topbar */
+        :root {
+            --topbar-height: 70px;
+            --sidebar-width: 240px;
+        }
+
         body {
             background-color: #f8f9fc;
             font-family: 'Segoe UI', sans-serif;
-            /* Mencegah scroll horizontal yang tidak perlu di body */
             overflow-x: hidden; 
+            padding-top: @hasSection('hideSidebar') 0px @else var(--topbar-height) @endif; 
         }
-        /* Style Sidebar (Pastikan sesuai dengan file sidebar Anda) */
+        
+        /* ---------------------------------------------------- */
+        /* === SIDEBAR STYLE === */
+        /* ---------------------------------------------------- */
         .sidebar {
-            min-height:100vh;
             background: linear-gradient(180deg, #3b82f6, #1e3a8a);
             color:white;
-            width:240px;
-            padding: 1rem;
-            flex-shrink: 0; /* Mencegah sidebar menyusut */
+            width:var(--sidebar-width);
+            padding: 1rem 0.75rem; /* Padding dikurangi sedikit agar compact */
+            flex-shrink: 0;
+            transition: margin-left 0.3s ease-in-out; 
+            position: fixed; 
+            top: var(--topbar-height); 
+            bottom: 0;
+            z-index: 999;
+            overflow-y: auto; 
         }
-         .sidebar .nav-link.active {
+
+        /* --- COMPACT SIDEBAR STYLES (Agar Muat Banyak Menu) --- */
+        .sidebar .nav-link {
+            font-size: 0.9rem !important;       /* Perkecil font menu */
+            padding-top: 0.5rem !important;     /* Kurangi padding atas */
+            padding-bottom: 0.5rem !important;  /* Kurangi padding bawah */
+        }
+        
+        .sidebar .nav-item {
+            margin-bottom: 0.25rem !important;  /* Kurangi jarak antar menu */
+        }
+
+        .sidebar .sidebar-header-text {
+            font-size: 0.85rem !important;      
+            line-height: 1.2;
+        }
+
+        .sidebar .sidebar-icon-header {
+            font-size: 1.2rem !important;       
+            margin-bottom: 0.5rem !important;
+        }
+
+        /* Submenu lebih rapat */
+        .sidebar .btn-toggle-nav li a {
+            padding-top: 0.3rem !important;
+            padding-bottom: 0.3rem !important;
+            font-size: 0.85rem !important;
+        }
+        
+        /* Scrollbar Style */
+        .sidebar::-webkit-scrollbar {
+            width: 6px; 
+        }
+        .sidebar::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+        }
+        .sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        /* ---------------------------------------------------- */
+
+        .content-wrapper {
+            flex-grow: 1;
+            transition: width 0.3s ease-in-out;
+            min-height: calc(100vh - var(--topbar-height)); 
+            display: flex; 
+            flex-direction: column; 
+            overflow-x: hidden; 
+        }
+        
+        /* Layout Logic */
+        .full-width { width: 100%; }
+        .full-width .content-wrapper { min-height: 100vh; }
+        .full-width .topbar, .full-width .d-md-flex { display: none !important; }
+
+        @media (min-width: 768px) {
+            .sidebar-toggled .sidebar {
+                margin-left: calc(0px - var(--sidebar-width)); 
+            }
+            .sidebar-toggled .content-wrapper {
+                margin-left: 0; 
+            }
+            {{-- .sidebar-toggled .d-md-flex {
+                display: none !important; 
+            } --}}
+        }
+        
+        /* Sidebar Active/Hover States */
+        .sidebar .nav-link.active {
             font-weight: 600;
             background-color: #ffffff;
             color: #1e3a8a;
             border-radius: 0.375rem;
-         }
-         .sidebar .nav-link:not(.active) {
-            color: white;
-         }
-         .sidebar .nav-link:hover:not(.active) {
+        }
+        .sidebar .nav-link:not(.active) { color: white; }
+        .sidebar .nav-link:hover:not(.active) {
             background-color: rgba(255, 255, 255, 0.1);
             border-radius: 0.375rem;
-         }
-         .sidebar .btn-toggle-nav a {
+        }
+        .sidebar .btn-toggle-nav a {
             color: rgba(255, 255, 255, 0.85);
-            padding-left: 2.5rem !important;
-         }
-         .sidebar .btn-toggle-nav a.active {
+            padding-left: 2.2rem !important;
+        }
+        .sidebar .btn-toggle-nav a.active {
             background-color: #ffffff;
             color: #1e3a8a;
             border-radius: 0.375rem;
-         }
-         .sidebar .btn-toggle-nav a:hover:not(.active) {
+        }
+        .sidebar .btn-toggle-nav a:hover:not(.active) {
             color: white;
             background-color: rgba(255, 255, 255, 0.1);
             border-radius: 0.375rem;
-         }
+        }
 
-        /* Style Topbar dan Konten */
+        /* Topbar & Content */
         .topbar {
             background-color: #fff;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
             padding: 10px 25px;
-            height: 70px;
+            height: var(--topbar-height);
             display: flex;
             align-items: center;
             justify-content: space-between; 
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 1000;
         }
-        .user-info {
+
+        /* --- STYLE BARU UNTUK TOMBOL TOGGLE (STYLE TOMBOL) --- */
+        .btn-toggle-custom {
+            background-color: #eff6ff; /* Latar biru muda */
+            color: #3b82f6; /* Ikon biru */
+            border-radius: 12px; /* Sudut tumpul modern */
+            width: 42px;
+            height: 42px;
             display: flex;
             align-items: center;
-            gap: 15px;
+            justify-content: center;
+            border: none;
+            transition: all 0.2s ease;
+            cursor: pointer;
         }
-        .user-info img {
-            border: 2px solid #e2e8f0;
-            width: 40px;
-            height: 40px;
+        .btn-toggle-custom:hover {
+            background-color: #dbeafe; /* Lebih gelap saat hover */
+            color: #1e3a8a;
+            transform: scale(1.05); /* Sedikit membesar */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
-        .user-info span {
-            font-weight: 500;
-            color: #5a5c69;
+        /* ----------------------------------------------------------- */
+        
+        .main-content {
+            padding: 25px; 
+            flex-grow: 1; 
+            margin-left: @hasSection('hideSidebar') 0px @else var(--sidebar-width) @endif; 
+            transition: margin-left 0.3s ease-in-out;
         }
         
-        /* ================================================== */
-        /* === PERBAIKAN CSS KONTEN WRAPPER === */
-        /* ================================================== */
-        .content-wrapper {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            width: 100%; /* <-- KEMBALIKAN BARIS INI */
-            overflow-x: hidden; /* <-- TAMBAHKAN BARIS INI (PENTING) */
+        @media (min-width: 768px) {
+             .sidebar-toggled .main-content { margin-left: 0; }
         }
-        /* ================================================== */
 
-        .main-content {
-            padding: 30px;
-            flex-grow: 1;
-        }
+        .user-info { display: flex; align-items: center; gap: 10px; }
+        .user-info img { border: 2px solid #e2e8f0; width: 35px; height: 35px; }
+        .user-info span { font-weight: 500; color: #5a5c69; font-size: 0.9rem; }
+        
         footer {
-            font-size: 14px;
-            padding: 20px 0;
+            font-size: 13px;
+            padding: 15px 0;
             background-color: #ffffff;
             border-top: 1px solid #e3e6f0;
             text-align: center;
             color: #858796;
             margin-top: auto;
         }
-        .pagination { justify-content: center; }
-        .page-link { color: #0d6efd; }
-        .page-item.active .page-link { background-color: #0d6efd; border-color: #0d6efd; color: white;}
-        .page-item.disabled .page-link { color: #868e96; }
-        .dropdown-menu {
-            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15) !important;
-            border: 1px solid #e3e6f0;
-        }
-        .dropdown-item i.fa-fw {
-            color: #858796;
-            margin-right: 0.5rem;
-            width: 1.25em;
-            text-align: center;
-        }
-        .dropdown-item:active {
-            background-color: #4e73df;
-            color: #fff;
-        }
-        .dropdown-item:active i.fa-fw {
-            color: rgba(255, 255, 255, 0.5);
-        }
-         .dropdown-toggle.user-info::after {
-            display: none;
-         }
-        .dropdown-divider {
-            border-top: 1px solid #e3e6f0;
-        }
-         .text-gray-800 {
-            color: #5a5c69 !important;
-         }
-         
-         .offcanvas-start {
-            width: 240px;
-         }
-         .offcanvas-body {
-            padding: 0;
-            overflow-y: auto;
-         }
-         .offcanvas-body .sidebar {
-            min-height: 100%;
-         }
-         
+
+        .offcanvas-start { width: var(--sidebar-width); }
+        .offcanvas-body { padding: 0; overflow-y: auto; }
+        .offcanvas-body .sidebar { min-height: 100%; position: relative; top: 0; }
     </style>
-
     @stack('styles')
-
 </head>
-<body class="font-sans antialiased">
+<body class="font-sans antialiased @if(View::hasSection('hideSidebar')) full-width @endif">
 
-    {{-- 1. SIDEBAR UNTUK MOBILE (Offcanvas, tersembunyi by default) --}}
+    @unless(View::hasSection('hideSidebar'))
     <div class="offcanvas offcanvas-start d-md-none" tabindex="-1" id="sidebarMobile" aria-labelledby="sidebarMobileLabel" data-bs-scroll="true">
         <div class="offcanvas-header">
             <h5 class="offcanvas-title" id="sidebarMobileLabel">Menu Navigasi</h5>
@@ -175,67 +222,62 @@
             @include('layouts.sidebar')
         </div>
     </div>
+    @endunless
 
-    {{-- 2. WRAPPER UTAMA (Sidebar + Konten) --}}
-    <div class="d-flex">
-
-        {{-- 3. SIDEBAR UNTUK DESKTOP (Statis, selalu terlihat) --}}
+    <div id="wrapper">
+        @unless(View::hasSection('hideSidebar'))
         <div class="d-none d-md-flex">
             @include('layouts.sidebar')
         </div>
+        @endunless
 
-
-        {{-- 4. KONTEN UTAMA WRAPPER --}}
         <div class="content-wrapper">
-
-            {{-- Topbar (Navbar Atas) --}}
+            @unless(View::hasSection('hideSidebar'))
             <nav class="topbar">
-                
-                {{-- TOMBOL HAMBURGER (HANYA Muncul di Mobile) --}}
-                <button class="btn btn-link d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMobile" aria-controls="sidebarMobile">
-                    <i class="fas fa-bars fa-lg text-primary"></i>
-                </button>
+                <div class="d-flex align-items-center">
+                    {{-- TOMBOL TOGGLE DESKTOP (GANTI IKON JADI LAYOUT/GRID) --}}
+                    {{-- Menggunakan class btn-toggle-custom dan icon fa-table-columns (lebih elegan dari garis 3) --}}
+                    <button class="btn-toggle-custom d-none d-md-flex" id="sidebarToggle" type="button" title="Sembunyikan Sidebar">
+                        <i class="fa-solid fa-table-columns fa-lg"></i>
+                    </button>
 
-                {{-- User Info Dropdown (Pindah ke kanan otomatis) --}}
+                    {{-- TOMBOL TOGGLE MOBILE (GANTI IKON JADI LAYOUT/GRID) --}}
+                    <button class="btn-toggle-custom d-md-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMobile" aria-controls="sidebarMobile">
+                        <i class="fa-solid fa-table-columns fa-lg"></i>
+                    </button>
+                </div>
+
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle user-info" href="#" id="userDropdown" role="button"
                             data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                             <span class="d-none d-lg-inline">{{ Auth::user()->name ?? 'Guest' }}</span>
-                            <img src="https://cdn-icons-png.flaticon.com/512/9131/9131529.png"
-                                class="rounded-circle">
+                            <img src="https://cdn-icons-png.flaticon.com/512/9131/9131529.png" class="rounded-circle">
                         </a>
-                        {{-- Dropdown Menu --}}
                         <div class="dropdown-menu dropdown-menu-end shadow animated--grow-in mt-2" aria-labelledby="userDropdown">
                             <a class="dropdown-item" href="{{ route('profil') }}">
-                                <i class="fas fa-user fa-sm fa-fw"></i>
-                                Profil Pengguna
+                                <i class="fas fa-user fa-sm fa-fw me-2"></i> Profil Pengguna
                             </a>
-                            <div class="dropdown-div    ider"></div>
+                            <div class="dropdown-divider"></div>
                             <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#logoutModal">
-                                <i class="fas fa-sign-out-alt fa-sm fa-fw"></i>
-                                Logout
+                                <i class="fas fa-sign-out-alt fa-sm fa-fw me-2"></i> Logout
                             </a>
                         </div>
                     </li>
                 </ul>
             </nav>
+            @endunless
 
-            {{-- Main Content Area --}}
             <div class="main-content">
-                <h3 class="fw-semibold mb-4 text-gray-800">@yield('page_title', 'Halaman')</h3>
                 @yield('content')
             </div>
 
-            {{-- Footer --}}
             <footer>
                 Hak Cipta &copy; {{ date('Y') }} Dinas Kesehatan Kabupaten Garut
             </footer>
-        </div> {{-- End of content-wrapper --}}
-    </div> {{-- End of d-flex --}}
+        </div>
+    </div>
 
-
-    {{-- Logout Modal --}}
     <div class="modal fade" id="logoutModal" tabindex="-1" role="dialog" aria-labelledby="logoutModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
@@ -255,16 +297,30 @@
         </div>
     </div>
 
-    {{-- Script JQuery (Penting) --}}
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
-
-    {{-- ================================================================== --}}
-    {{-- === PERBAIKAN: HAPUS SISA KOMENTAR '-->' YANG RUSAK === --}}
-    {{-- ================================================================== --}}
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    {{-- ================================================================== --}}
+    @vite(['resources/js/app.js']) 
     
-    @stack('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleButton = document.getElementById('sidebarToggle');
+            const body = document.querySelector('body');
+            
+            if (localStorage.getItem('sidebarStatus') === 'toggled') {
+                body.classList.add('sidebar-toggled');
+            }
 
+            if (toggleButton) {
+                toggleButton.addEventListener('click', function() {
+                    body.classList.toggle('sidebar-toggled');
+                    if (body.classList.contains('sidebar-toggled')) {
+                        localStorage.setItem('sidebarStatus', 'toggled');
+                    } else {
+                        localStorage.removeItem('sidebarStatus');
+                    }
+                });
+            }
+        });
+    </script>
+    @stack('scripts')
 </body>
 </html>

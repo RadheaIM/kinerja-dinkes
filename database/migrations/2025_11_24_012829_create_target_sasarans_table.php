@@ -6,19 +6,14 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        // 1. HAPUS DULU TABEL LAMA (Solusi untuk error "Table already exists")
-        // Ini akan otomatis membuang tabel target_sasarans yang nyangkut/salah.
+        // Pastikan tabel lama dibuang dulu jika ada sisa-sisa
         Schema::dropIfExists('target_sasarans');
 
-        // 2. BUAT TABEL BARU DENGAN STRUKTUR YANG BENAR
         Schema::create('target_sasarans', function (Blueprint $table) {
             $table->id();
-            // Kita simpan nama puskesmas sebagai string sederhana
+            // INI YANG BENAR: String puskesmas_name, BUKAN Foreign Key
             $table->string('puskesmas_name'); 
             $table->year('tahun');
             $table->string('indikator_name');
@@ -27,9 +22,6 @@ return new class extends Migration
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('target_sasarans');

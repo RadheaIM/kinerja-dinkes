@@ -148,7 +148,7 @@
                  <button type="button" class="btn btn-danger my-1" 
                         data-bs-toggle="modal" 
                         data-bs-target="#deleteConfirmModal"
-                        data-delete-url="{{ route('rhk-kapus.destroy', ['puskesmas_name' => 'PERKIN_MASTER_DOCUMENT', 'tahun' => $tahun]) }}"
+                        data-delete-url="{{ route('rhk-kapus.destroy', ['rhk_kapu' => 'PERKIN_MASTER_DOCUMENT', 'tahun' => $tahun]) }}"
                         data-delete-message="Apakah Anda yakin ingin menghapus data RHK Kapus Master untuk tahun {{ $tahun }}? Ini akan menghapus semua data untuk tahun ini.">
                     <i class="fas fa-trash"></i> Hapus Dokumen Perkin Tahun {{ $tahun }}
                 </button>

@@ -1,13 +1,13 @@
 <?php
-// File: app/Http/Controllers/LaporanKinerjaController.php
 
 namespace App\Http\Controllers;
 
 use App\Models\LaporanKinerja;
 use App\Models\KinerjaCapaianDetail;
 use App\Models\SasaranPuskesmas;
+use App\Models\TargetSasaran; // <-- PENTING: Model Target Sasaran ditambahkan
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth; // <-- PENTING
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
@@ -29,13 +29,16 @@ class LaporanKinerjaController extends Controller
         'Pelayanan Kesehatan Orang Dengan Gangguan Jiwa (ODGJ) Berat',
         'Pelayanan Kesehatan Orang Terduga Tuberkulosis',
         'Pelayanan Kesehatan Orang Dengan Risiko Terinfeksi Virus HIV',
-        'Capaian D/S', // Tambahan dari sebelumnya
-        'Kunjungan Rawat Jalan', // Baru
-        'Kunjungan Rawat Jalan Gigi', // Baru
-        'Kunjungan Rawat Inap', // Baru
-        'Tingkat Ketersediaan Obat', // Baru
-        'Kelengkapan Laporan', // Baru
-        'Capaian IKS', // Baru
+        'Capaian D/S',
+        'Capaian IDL',
+        'Capaian IKS', 
+        'Cek Kesehatan Gratis',
+        'Jumlah Balita Stunting',
+        'Kematian Ibu',
+        'Kematian Bayi',
+        'Jumlah Kunjungan Rawat Jalan',
+        'Jumlah Kunjungan Rawat Inap',
+        'Kejadian KLB',
     ];
     // =======================================================
 
@@ -177,20 +180,16 @@ class LaporanKinerjaController extends Controller
             $chartYear = $selectedLaporan->tahun;
             $labels = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'];
             
-            // ==========================================================
-            // === AWAL PERBAIKAN GRAFIK ===
-            // ==========================================================
-
             // Siapkan palet warna untuk grafik
             $colors = [
                 '#3b82f6', '#ef4444', '#22c55e', '#eab308', '#8b5cf6', '#ec4899', 
                 '#f97316', '#14b8a6', '#64748b', '#06b6d4', '#d946ef', '#f43f5e',
-                '#84cc16', '#10b981', '#0ea5e9', '#6366f1', '#a855f7' // Tambah warna lagi
+                '#84cc16', '#10b981', '#0ea5e9', '#6366f1', '#a855f7'
             ];
             
             $chartDatasets = [];
             
-            // Loop SEMUA detail dari laporan yang dipilih, bukan cuma satu
+            // Loop SEMUA detail dari laporan yang dipilih
             foreach ($selectedLaporan->details as $index => $detail) {
                 
                 // Ambil data bulanan
@@ -199,25 +198,21 @@ class LaporanKinerjaController extends Controller
                     $monthlyData[] = $detail['bln_'.$i] ?? 0;
                 }
                 
-                // Ambil warna dari palet, ulangi jika jumlah data lebih banyak dari warna
+                // Ambil warna dari palet
                 $color = $colors[$index % count($colors)];
 
                 // Masukkan sebagai dataset baru
                 $chartDatasets[] = [
-                    'label' => $detail->indikator_name, // <-- Dinamis sesuai nama indikator
+                    'label' => $detail->indikator_name, 
                     'data' => $monthlyData,
                     'borderColor' => $color,
-                    'backgroundColor' => $color . '33', // Warna transparan untuk background
-                    'fill' => false, // <-- Ganti ke 'false' agar grafik garis tidak menumpuk
+                    'backgroundColor' => $color . '33', 
+                    'fill' => false, 
                     'tension' => 0.1
                 ];
             }
 
             $chartData = ['labels' => $labels, 'datasets' => $chartDatasets];
-
-            // ==========================================================
-            // === AKHIR PERBAIKAN GRAFIK ===
-            // ==========================================================
         }
 
         // 3. Arahkan ke view admin_index
@@ -240,7 +235,7 @@ class LaporanKinerjaController extends Controller
         // Tentukan filter query berdasarkan role user
         if ($user->role === 'labkesda') {
             // Hardcode pencarian untuk 'Labkesda'
-            $query->where('jenis_laporan', 'labkesda_capaian') // <-- PERBAIKAN: jenis_laporan Labkesda
+            $query->where('jenis_laporan', 'labkesda_capaian') 
                   ->where('puskesmas_name', 'Labkesda');
             
             // Filter tahun juga di-hardcode
@@ -250,11 +245,11 @@ class LaporanKinerjaController extends Controller
         } else { // Asumsi role 'puskesmas'
             // Gunakan nama_puskesmas dari user
             $query->where('jenis_laporan', 'capaian_program')
-                  ->where('puskesmas_name', $user->nama_puskesmas); // <-- PERBAIKAN: nama_puskesmas
+                  ->where('puskesmas_name', $user->nama_puskesmas); 
             
             // Filter tahun juga menggunakan nama_puskesmas dari user
             $yearsQuery->where('jenis_laporan', 'capaian_program')
-                       ->where('puskesmas_name', $user->nama_puskesmas); // <-- PERBAIKAN: nama_puskesmas
+                       ->where('puskesmas_name', $user->nama_puskesmas); 
         }
         
         $laporans = $query->paginate(20);
@@ -267,19 +262,78 @@ class LaporanKinerjaController extends Controller
             $availableYears = $availableYears->sortDesc()->values();
         }
 
-        // Pastikan file view ini ada: resources/views/laporan_kinerja/user_index.blade.php
         return view('laporan_kinerja.user_index', compact('laporans', 'availableYears', 'tahun'));
     }
 
     /**
      * Menampilkan form untuk membuat laporan Puskesmas - Capaian Program.
+     * DIPERBARUI: Mengambil Target Otomatis dengan LOGIKA SMART SEARCH
      */
-    public function create()
+    public function create(Request $request)
     {
+        // 1. Ambil Tahun (Default tahun sekarang jika tidak ada di request)
+        $tahun = $request->query('tahun', date('Y'));
+
+        // 2. Tentukan Nama Unit (Puskesmas) untuk mencari Target
+        $namaUnit = null;
+        if (Auth::user()->role === 'puskesmas') {
+            // Ambil dari profil user yang login
+            $namaUnit = Auth::user()->nama_puskesmas ?? Auth::user()->name; 
+        } else {
+            // Jika Admin membuatkan, ambil dari request (jika ada)
+            $namaUnit = $request->query('puskesmas');
+        }
+
+        // 3. AMBIL DATA TARGET DARI DATABASE DENGAN PENCARIAN CERDAS
+        // Kita butuh ini karena mungkin profil user isinya "lembang",
+        // tapi admin menyimpannya sebagai "puskesmas lembang" (atau sebaliknya).
+        $savedTargets = [];
+        
+        if ($namaUnit) {
+            // PERCOBAAN 1: Cari dengan nama persis
+            $savedTargets = TargetSasaran::where('puskesmas_name', $namaUnit)
+                            ->where('tahun', $tahun)
+                            ->pluck('target_value', 'indikator_name')
+                            ->toArray();
+
+            // PERCOBAAN 2: Jika kosong, coba variasi nama
+            if (empty($savedTargets)) {
+                $altName = '';
+                
+                // Cek apakah nama mengandung kata 'puskesmas'
+                if (stripos($namaUnit, 'puskesmas') === false) {
+                    // Jika TIDAK ada kata puskesmas (misal: "lembang"), coba cari "Puskesmas lembang"
+                    $altName = 'Puskesmas ' . $namaUnit;
+                    
+                    // Coba juga variasi huruf kecil semua
+                    $altNameLower = 'puskesmas ' . strtolower($namaUnit);
+                } else {
+                    // Jika ADA kata puskesmas (misal: "Puskesmas Lembang"), coba cari "Lembang" saja
+                    // Hapus kata 'puskesmas' dan spasi
+                    $altName = trim(str_ireplace('puskesmas', '', $namaUnit));
+                }
+
+                // Jalankan query pencarian alternatif (gunakan LIKE agar tidak case sensitive)
+                // Kita ambil alternatif yang mungkin cocok
+                if ($altName) {
+                    $savedTargets = TargetSasaran::where(function($q) use ($altName) {
+                                        $q->where('puskesmas_name', 'LIKE', $altName) // Cari yang mirip "Lembang"
+                                          ->orWhere('puskesmas_name', 'LIKE', 'puskesmas ' . $altName); // Cari "puskesmas Lembang"
+                                    })
+                                    ->where('tahun', $tahun)
+                                    ->pluck('target_value', 'indikator_name')
+                                    ->toArray();
+                }
+            }
+        }
+
+        // 4. Data Pendukung Lainnya
         $puskesmasNames = SasaranPuskesmas::distinct()->orderBy('puskesmas')->pluck('puskesmas');
         $indicators = $this->getIndicators('capaian_program'); 
         $jenisLaporan = 'capaian_program';
-        return view('laporan_kinerja.create', compact('indicators', 'puskesmasNames', 'jenisLaporan'));
+
+        // 5. Kirim data ke View (termasuk $savedTargets)
+        return view('laporan_kinerja.create', compact('indicators', 'puskesmasNames', 'jenisLaporan', 'savedTargets', 'tahun', 'namaUnit'));
     }
 
     /**
@@ -298,8 +352,7 @@ class LaporanKinerjaController extends Controller
      */
     public function store(Request $request)
     {
-        // Validasi 'puskesmas_name' dikembalikan menjadi 'required'
-        // karena form blade kita (yang sudah diperbaiki) PASTI mengirimkannya.
+        // Validasi
         $rules = [
             'puskesmas_name' => 'required|string|max:255',
             'tahun' => 'required|integer|min:2020|max:2099',
@@ -311,26 +364,22 @@ class LaporanKinerjaController extends Controller
             'details.*.bln_7' => 'nullable|numeric|min:0', 'details.*.bln_8' => 'nullable|numeric|min:0',
             'details.*.bln_9' => 'nullable|numeric|min:0', 'details.*.bln_10' => 'nullable|numeric|min:0',
             'details.*.bln_11' => 'nullable|numeric|min:0', 'details.*.bln_12' => 'nullable|numeric|min:0',
-            'jenis_laporan' => 'required|string', // <-- Tambahkan ini untuk validasi form admin
+            'jenis_laporan' => 'required|string', 
         ];
         
         $validated = $request->validate($rules);
         
-        // Dapatkan user yang sedang login
         $user = Auth::user();
     
         DB::beginTransaction();
         try {
             
-            // ==========================================================
-            // === PERBAIKAN LOGIKA KEAMANAN (NAMA KOLOM & JENIS LAPORAN) ===
-            // ==========================================================
             $puskesmasName = '';
-            $jenisLaporan = ''; // <-- Definisikan di sini
+            $jenisLaporan = '';
             
             if ($user->role === 'admin') {
                 $puskesmasName = $validated['puskesmas_name'];
-                $jenisLaporan = $validated['jenis_laporan']; // Ambil dari form
+                $jenisLaporan = $validated['jenis_laporan']; 
     
             } else {
                 // User Puskesmas / Labkesda mengambil nama dari profilnya
@@ -340,33 +389,29 @@ class LaporanKinerjaController extends Controller
 
                 if ($user->role === 'labkesda') {
                     $puskesmasName = 'Labkesda';
-                    $jenisLaporan = 'labkesda_capaian'; // <-- PERBAIKAN: PAKSA JENIS LAPORAN
+                    $jenisLaporan = 'labkesda_capaian'; 
                 } else {
-                    $puskesmasName = $user->nama_puskesmas; // <-- Menggunakan nama kolom yang benar
-                    $jenisLaporan = 'capaian_program'; // <-- PERBAIKAN: PAKSA JENIS LAPORAN
+                    $puskesmasName = $user->nama_puskesmas; 
+                    $jenisLaporan = 'capaian_program'; 
                 }
 
                 if ($validated['puskesmas_name'] !== $puskesmasName) {
                     throw new \Exception("Penyimpanan gagal. Data puskesmas form ({$validated['puskesmas_name']}) tidak cocok dengan profil Anda ({$puskesmasName}).");
                 }
             }
-            // ==========================================================
-            // === AKHIR PERBAIKAN ===
-            // ==========================================================
 
-            // Pindahkan validasi target_sasaran ke sini
+            // Validasi tambahan target_sasaran
             if ($jenisLaporan === 'capaian_program') { 
                 $rules['details.*.target_sasaran'] = 'nullable|integer|min:0'; 
-                // Validasi ulang HANYA untuk target_sasaran jika diperlukan
                 $request->validate(['details.*.target_sasaran' => 'nullable|integer|min:0']);
             }
             
-            $indicators = $this->getIndicators($jenisLaporan); // <-- Sekarang aman
+            $indicators = $this->getIndicators($jenisLaporan); 
 
             $laporan = LaporanKinerja::firstOrNew([
-                'puskesmas_name' => $puskesmasName, // <-- Gunakan nama yang sudah aman
+                'puskesmas_name' => $puskesmasName, 
                 'tahun' => $validated['tahun'],
-                'jenis_laporan' => $jenisLaporan // <-- Gunakan jenis yang sudah aman
+                'jenis_laporan' => $jenisLaporan 
             ]);
             
             $laporan->keterangan = $validated['keterangan'] ?? null;
@@ -402,19 +447,16 @@ class LaporanKinerjaController extends Controller
             
             DB::commit();
     
-            // Pindah ke halaman edit dengan pesan sukses
             return redirect()->route('laporan-kinerja.edit', ['id' => $laporan->id])
-                            ->with('success', "Laporan Kinerja [" . $puskesmasName . " - " . $validated['tahun'] . "] berhasil disimpan/diperbarui!");
+                             ->with('success', "Laporan Kinerja [" . $puskesmasName . " - " . $validated['tahun'] . "] berhasil disimpan/diperbarui!");
     
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error("Gagal menyimpan laporan kinerja [$jenisLaporan]: " . $e->getMessage() . " Trace: " . $e->getTraceAsString());
             
-            // Kirim error yang jelas ke halaman 'create'
             return redirect()->back()->with('error', 'Gagal menyimpan laporan: ' . $e->getMessage())->withInput();
         }
     }
-
 
 
     /**
@@ -454,7 +496,6 @@ class LaporanKinerjaController extends Controller
        $laporan = LaporanKinerja::findOrFail($id);
        $user = Auth::user();
        
-       // --- PERBAIKAN LOGIKA OTORISASI ---
        if (!$this->canUserAccessLaporan($user, $laporan)) {
           return redirect()->route('laporan-kinerja.user.index')
                            ->with('error', 'Anda tidak diizinkan memperbarui laporan unit kerja lain.');
@@ -475,7 +516,7 @@ class LaporanKinerjaController extends Controller
             $user = Auth::user();
             if (!$this->canUserAccessLaporan($user, $laporan)) {
                 return redirect()->route('laporan-kinerja.user.index')
-                                        ->with('error', 'Anda tidak diizinkan menghapus laporan unit kerja lain.');
+                                 ->with('error', 'Anda tidak diizinkan menghapus laporan unit kerja lain.');
             }
             // --- AKHIR PERBAIKAN ---
 
@@ -483,18 +524,14 @@ class LaporanKinerjaController extends Controller
             $tahun = $laporan->tahun;
             $laporan->delete(); 
             
-            // ==========================================================
-            // === PERBAIKAN: GANTI SEMUA REDIRECT DENGAN INI ===
-            // ==========================================================
             return redirect()->back()->with('success', "Laporan Kinerja untuk $nama tahun $tahun berhasil dihapus!");
-            // ==========================================================
 
         } catch (\Exception $e) {
             Log::error('Gagal menghapus laporan kinerja ID ' . $id . ': ' . $e->getMessage());
             return redirect()->back()->with('error', 'Gagal menghapus laporan. Error: ' . $e->getMessage());
         }
     }
- /**
+   /**
      * Memeriksa apakah user yang login berhak mengakses laporan tertentu.
      */
     private function canUserAccessLaporan($user, $laporan)
@@ -506,11 +543,10 @@ class LaporanKinerjaController extends Controller
 
         // 2. User 'labkesda' hanya boleh mengakses laporan 'labkesda_capaian'
         if ($user->role === 'labkesda') {
-            // Kita cek berdasarkan jenis laporannya, ini lebih aman
             return $laporan->jenis_laporan === 'labkesda_capaian';
         }
 
         // 3. User lain (Puskesmas) dicek berdasarkan puskesmas_name
         return $user->nama_puskesmas === $laporan->puskesmas_name;
     }
-} // <-- Ini adalah } penutup class. Letakkan fungsi baru di ATAS baris ini
+}

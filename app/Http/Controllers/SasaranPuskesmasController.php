@@ -1,5 +1,4 @@
 <?php
-// File: app/Http/Controllers/SasaranPuskesmasController.php
 
 namespace App\Http\Controllers;
 
@@ -8,7 +7,7 @@ use App\Models\SasaranPuskesmas;
 use App\Imports\SasaranPuskesmasImport;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB; // Pastikan DB di-import
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 
 class SasaranPuskesmasController extends Controller
@@ -25,6 +24,17 @@ class SasaranPuskesmasController extends Controller
         }
         
         $query = SasaranPuskesmas::query(); 
+        
+        // ==========================================================
+        // === Tangkap dan Terapkan Filter Tahun ===
+        // ==========================================================
+        $tahunFilter = $request->input('tahun');
+        
+        if ($tahunFilter) {
+            // Kolom 'tahun' sudah dipastikan ada di database
+            $query->where('tahun', $tahunFilter); 
+        }
+        // ==========================================================
 
         // Filter pencarian (berlaku untuk semua role yang bisa akses)
         if ($request->has('search')) { 
@@ -33,12 +43,10 @@ class SasaranPuskesmasController extends Controller
         }
 
         // ==========================================================
-        // === PERUBAHAN BARU: Hitung Total Keseluruhan ===
+        // === Hitung Total Keseluruhan (Sesuai Filter Tahun & Search) ===
         // ==========================================================
-        // 1. Clone query SEBELUM di-paginate, agar totalnya sesuai filter pencarian
         $totalQuery = clone $query;
 
-        // 2. Ambil SUM dari semua kolom yang relevan
         $totals = $totalQuery->select(
             DB::raw('SUM(bumil) as bumil'),
             DB::raw('SUM(bulin) as bulin'),
@@ -53,14 +61,14 @@ class SasaranPuskesmasController extends Controller
             DB::raw('SUM(tb) as tb'),
             DB::raw('SUM(hiv) as hiv'),
             DB::raw('SUM(idl) as idl')
-        )->first(); // first() untuk mengambil 1 baris hasil SUM
+        )->first();
         // ==========================================================
 
-        // 3. Lanjutkan query asli untuk paginasi
+        // Lanjutkan query asli untuk paginasi
         $laporans = $query->orderBy('puskesmas')->paginate(20);
         
-        // 4. Kirim KEDUA variabel ke view
-        return view('laporan_puskesmas.index', compact('laporans', 'totals'));
+        // Kirim semua variabel yang diperlukan ke view
+        return view('laporan_puskesmas.index', compact('laporans', 'totals', 'tahunFilter'));
     }
 
     /**
@@ -71,7 +79,7 @@ class SasaranPuskesmasController extends Controller
         if (Auth::user()->role !== 'admin') {
             abort(403, 'Anda tidak diizinkan mengakses halaman ini.');
         }
-        return view('laporan_puskesmas.import');
+        return view('laporan_puskesmas.import'); 
     }
 
     /**
@@ -84,26 +92,30 @@ class SasaranPuskesmasController extends Controller
         }
 
         $request->validate([
-            'file' => 'required|mimes:xlsx,xls'
+            'file' => 'required|mimes:xlsx,xls',
+            'tahun_import' => 'required|integer|min:2020', 
         ]);
+
+        $tahunImport = $request->input('tahun_import');
 
         DB::beginTransaction(); 
         try {
-            SasaranPuskesmas::query()->delete(); 
+            SasaranPuskesmas::where('tahun', $tahunImport)->delete(); 
             
-            Excel::import(new SasaranPuskesmasImport, $request->file('file'));
+            // Asumsi SasaranPuskesmasImport.php sudah memiliki constructor($tahun)
+            Excel::import(new SasaranPuskesmasImport($tahunImport), $request->file('file'));
+            
             DB::commit(); 
-            return redirect()->route('laporan-puskesmas.index')->with('success', 'Data sasaran puskesmas berhasil diimpor!');
+            return redirect()->route('laporan-puskesmas.index')->with('success', 'Data sasaran puskesmas tahun ' . $tahunImport . ' berhasil diimpor!');
         
         } catch (\Exception $e) {
             DB::rollBack(); 
             Log::error("Gagal import Sasaran Puskesmas: " . $e->getMessage());
+            // Berikan pesan error yang lebih informatif
             return redirect()->back()->with('error', 'IMPORT GAGAL: ' . $e->getMessage());
         }
     }
 
-    // ... (Sisa fungsi create, store, edit, update, destroy, exportPdf tidak berubah) ...
-    // ... (Pastikan sisa fungsi Anda ada di sini) ...
     /**
      * Show the form for creating a new resource.
      */
@@ -128,7 +140,7 @@ class SasaranPuskesmasController extends Controller
     public function edit($id)
     {
         if (Auth::user()->role !== 'admin') { abort(403); }
-        return redirect()->route('laporan_puskesmas.index')->with('error', 'Fitur Edit tidak tersedia untuk data ini.');
+        return redirect()->route('laporan-puskesmas.index')->with('error', 'Fitur Edit tidak tersedia untuk data ini.');
     }
 
     /**
@@ -141,7 +153,7 @@ class SasaranPuskesmasController extends Controller
     }
 
     /**
-     * Remove the specified resource from storage.
+     * Remove the specified resource from storage. (Penghapusan Satuan)
      */
     public function destroy($id)
     {
@@ -154,7 +166,68 @@ class SasaranPuskesmasController extends Controller
             $laporan->delete();
             return redirect()->route('laporan-puskesmas.index')->with('success', 'Data berhasil dihapus.');
         } catch (\Exception $e) {
-             return redirect()->route('laporan-puskesmas.index')->with('error', 'Gagal menghapus data.');
+             // Tangani Foreign Key Constraint untuk hapus satuan
+             if (str_contains($e->getMessage(), 'foreign key')) {
+                 return redirect()->route('laporan-puskesmas.index')->with('error', 'Gagal menghapus data. Sasaran ini sudah digunakan di Laporan Kinerja.');
+             }
+             return redirect()->route('laporan-puskesmas.index')->with('error', 'Gagal menghapus data: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * === FUNGSI BARU: MENGHAPUS SEMUA SASARAN BERDASARKAN TAHUN ===
+     */
+    public function destroyByYear(Request $request)
+    {
+        if (Auth::user()->role !== 'admin') {
+            abort(403, 'Anda tidak diizinkan mengakses halaman ini.');
+        }
+
+        // 1. Ambil input tahun.
+        $tahun = $request->input('tahun');
+        
+        // 2. Validasi input tahun jika filter tidak kosong.
+        // Jika $tahun kosong (Semua Tahun), kita lewati validasi integer.
+        if (!empty($tahun)) {
+             $request->validate([
+                'tahun' => 'integer|min:2020',
+             ]);
+        }
+
+        $isAllYears = empty($tahun);
+        $messageYear = $isAllYears ? 'SEMUA TAHUN' : "tahun **$tahun**";
+
+        DB::beginTransaction();
+        try {
+            $query = SasaranPuskesmas::query();
+            
+            // Hapus semua data hanya jika $tahun tidak ada, atau filter berdasarkan $tahun
+            if (!$isAllYears) {
+                $query->where('tahun', $tahun);
+            }
+            
+            $count = $query->delete(); // Lakukan penghapusan massal
+
+            DB::commit();
+            
+            if ($count > 0) {
+                return redirect()->route('laporan-puskesmas.index')
+                                 ->with('success', "Berhasil menghapus **$count** baris data Sasaran Puskesmas untuk **$messageYear**.");
+            } else {
+                 return redirect()->route('laporan-puskesmas.index')
+                                 ->with('warning', "Tidak ada data Sasaran Puskesmas untuk **$messageYear** yang ditemukan untuk dihapus.");
+            }
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error("Gagal menghapus data massal Sasaran Puskesmas ($messageYear): " . $e->getMessage());
+            
+            // Tangani Foreign Key Constraint
+            if (str_contains($e->getMessage(), 'foreign key')) {
+                return redirect()->back()->with('error', 'Gagal menghapus data massal: Data Sasaran '.$messageYear.' **sudah digunakan** dalam Laporan Kinerja. Harap hapus Laporan Kinerja terkait terlebih dahulu.');
+            }
+            
+            return redirect()->back()->with('error', 'Gagal menghapus data massal: ' . $e->getMessage());
         }
     }
 
@@ -164,8 +237,8 @@ class SasaranPuskesmasController extends Controller
     public function exportPdf(Request $request)
     {
          if (Auth::user()->role !== 'admin') {
-            abort(403, 'Anda tidak diizinkan mengakses halaman ini.');
-        }
-        return redirect()->route('laporan-puskesmas.index')->with('error', 'Fitur PDF belum disesuaikan.');
+             abort(403, 'Anda tidak diizinkan mengakses halaman ini.');
+         }
+         return redirect()->route('laporan-puskesmas.index')->with('error', 'Fitur PDF belum disesuaikan.');
     }
 }

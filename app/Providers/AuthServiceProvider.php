@@ -2,8 +2,9 @@
 
 namespace App\Providers;
 
-// use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Gate; // WAJIB: Tambahkan ini
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
+use App\Models\User; // WAJIB: Asumsi model User ada
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -25,6 +26,15 @@ class AuthServiceProvider extends ServiceProvider
     {
         $this->registerPolicies();
 
-        //
+        // ==========================================================
+        // TAMBAHKAN DEFINISI GATE UNTUK ADMIN-ACCESS DI SINI
+        // ==========================================================
+        
+        Gate::define('admin-access', function (User $user) {
+            // Asumsi kolom role di tabel users memiliki nilai 'admin'
+            return $user->role === 'admin';
+        });
+        
+        // ==========================================================
     }
 }
