@@ -1,5 +1,4 @@
 <?php
-// File: app/Http/Controllers/AdministrasiTuController.php
 
 namespace App\Http\Controllers;
 
@@ -302,7 +301,7 @@ class AdministrasiTuController extends Controller
 
 
     /**
-     * PERBAIKAN: Fungsi store() yang aman (Hapus TOTAL referensi 'deskripsi' dari $dataToSave)
+     * PERBAIKAN: Fungsi store() yang aman
      */
     public function store(Request $request)
     {
@@ -353,11 +352,16 @@ class AdministrasiTuController extends Controller
                 throw new \Exception("Data indikator tidak lengkap. Harusnya ada $minIndicators, diterima " . count($validated['indikators']));
             }
             
-            // --- HAPUS DATA LAMA SEBELUM INPUT BARU ---
+            // --- HAPUS DATA LAMA SEBELUM INPUT BARU AGAR BERSIH ---
+            // Kita tidak perlu menghapus file fisiknya, karena di loop bawah akan dicek ulang
+            // Tapi untuk amannya kita pakai updateOrCreate di bawah, jadi baris delete ini opsional
+            // Jika mau benar-benar reset, uncomment baris delete di bawah.
+            /*
             AdministrasiTu::where('puskesmas_name', $puskesmas)
                             ->where('tahun', $tahun)
                             ->where('jenis_laporan', $jenisLaporan)
                             ->delete();
+            */
 
             foreach (array_slice($validated['indikators'], 0, $minIndicators) as $index => $inputData) {
                 $indicatorDetail = $indicatorsList[$index] ?? null;
@@ -366,11 +370,9 @@ class AdministrasiTuController extends Controller
                 }
                 $indikatorName = $indicatorDetail['indikator'];
                 $jenisLayanan = $indicatorDetail['jenis'] ?? null;
-                // $deskripsi = $indicatorDetail['deskripsi'] ?? null; // Kita tidak simpan ini
                 $target = $indicatorDetail['target'] ?? null;
                 
                 // Ambil existing item (untuk file/link yang mungkin dipertahankan/dihapus)
-                // Kita gunakan query sederhana untuk menghindari error 'firstOrNew' yang kompleks
                 $existingItem = AdministrasiTu::where([
                     'puskesmas_name' => $puskesmas,
                     'tahun' => $tahun,
@@ -416,7 +418,6 @@ class AdministrasiTuController extends Controller
                     'jenis_laporan' => $jenisLaporan,
                     'jenis_layanan_spm' => $jenisLayanan,
                     'indikator' => $indikatorName,
-                    // 'deskripsi' DIHAPUS DARI SINI
                     'target' => $target,
                     'link_bukti_dukung' => $finalLinks,
                     'file_bukti_dukung' => $finalFilePaths,
@@ -442,8 +443,8 @@ class AdministrasiTuController extends Controller
             DB::commit();
 
             return redirect()->route('administrasi-tu.edit', [
-                                        'puskesmas' => $puskesmas, 
-                                        'tahun' => $tahun
+                                    'puskesmas' => $puskesmas, 
+                                    'tahun' => $tahun
                                    ])
                                    ->with('success', "Data Administrasi & TU untuk $puskesmas tahun $tahun berhasil disimpan.");
 
@@ -456,30 +457,52 @@ class AdministrasiTuController extends Controller
     }
 
     /**
-     * Hapus satu indikator laporan (beserta file terkait jika ada)
+     * PERBAIKAN: Fungsi destroy() UNTUK HAPUS MASSAL PER PUSKESMAS & TAHUN
+     * Logika ini menggantikan penghapusan per ID baris, karena tabel rekap menampilkan per puskesmas.
      */
     public function destroy(Request $request, $id)
     {
         try {
             $user = Auth::user();
-            $item = AdministrasiTu::findOrFail($id);
+            
+            // Di sini $id sebenarnya adalah NAMA PUSKESMAS yang dikirim dari route
+            $namaPuskesmas = $id; 
+            
+            // Ambil tahun dari request (dikirim lewat hidden input form delete)
+            // Jika tidak ada, default ke tahun sekarang (tapi sebaiknya selalu kirim dari form)
+            $tahun = $request->input('tahun', date('Y'));
 
-            // Hak akses: hanya admin atau user yang sesuai puskesmas/labkesda
-            if (!$this->canUserAccess($user, $item->puskesmas_name)) {
+            // Cek Hak Akses sebelum menghapus
+            if (!$this->canUserAccess($user, $namaPuskesmas)) {
                 return redirect()->back()->with('error', 'Anda tidak diizinkan menghapus data unit kerja lain.');
             }
 
-            // Hapus file bukti jika ada
-            $files = is_array($item->file_bukti_dukung ?? null) ? $item->file_bukti_dukung : ($item->file_bukti_dukung ? (array) $item->file_bukti_dukung : []);
-            foreach ($files as $f) {
-                if ($f && Storage::disk('public')->exists($f)) {
-                    Storage::disk('public')->delete($f);
-                }
+            // --- LOGIKA HAPUS FILE FISIK DULU ---
+            // Kita cari semua data milik puskesmas & tahun tsb untuk hapus file-nya
+            $itemsToDelete = AdministrasiTu::where('puskesmas_name', $namaPuskesmas)
+                                           ->where('tahun', $tahun)
+                                           ->get();
+            
+            if ($itemsToDelete->isEmpty()) {
+                return redirect()->back()->with('error', "Data untuk $namaPuskesmas tahun $tahun tidak ditemukan.");
             }
 
-            $item->delete();
+            foreach ($itemsToDelete as $item) {
+                 $files = is_array($item->file_bukti_dukung ?? null) ? $item->file_bukti_dukung : ($item->file_bukti_dukung ? (array) $item->file_bukti_dukung : []);
+                 foreach ($files as $f) {
+                     if ($f && Storage::disk('public')->exists($f)) {
+                         Storage::disk('public')->delete($f);
+                     }
+                 }
+            }
 
-            return redirect()->back()->with('success', 'Data berhasil dihapus.');
+            // --- HAPUS DATA DI DATABASE ---
+            $deletedCount = AdministrasiTu::where('puskesmas_name', $namaPuskesmas)
+                                          ->where('tahun', $tahun)
+                                          ->delete();
+
+            return redirect()->back()->with('success', "Berhasil menghapus seluruh data Administrasi TU untuk $namaPuskesmas tahun $tahun.");
+
         } catch (\Exception $e) {
             Log::error('Gagal menghapus AdministrasiTu: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Gagal menghapus data: ' . $e->getMessage());

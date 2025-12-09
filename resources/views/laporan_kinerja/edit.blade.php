@@ -76,6 +76,13 @@
             <h6 class="m-0 font-weight-bold text-primary">Detail Capaian Program</h6>
         </div>
         <div class="card-body">
+            {{-- Peringatan jika data master target kosong --}}
+            @if(isset($savedTargets) && empty($savedTargets))
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i> Data target tidak ditemukan di database master untuk unit <strong>{{ $laporan->puskesmas_name }}</strong> tahun <strong>{{ $laporan->tahun }}</strong>. Kolom target akan bernilai 0.
+                </div>
+            @endif
+
             <div class="table-responsive">
                 <table class="table table-bordered table-sm" id="capaianTable" style="min-width: 1500px;">
                     <thead class="bg-light text-center">
@@ -106,21 +113,48 @@
                                 @php
                                     // Cari detail yang cocok berdasarkan nama indikator
                                     $detail = $details->get($indicatorName);
+
+                                    // --- LOGIKA PENENTUAN TARGET (LOCKED & AUTO-FILL) ---
+                                    $targetVal = 0;
+                                    
+                                    // 1. Prioritas: Ambil dari Master Data ($savedTargets) yang dikirim Controller
+                                    if (isset($savedTargets) && !empty($savedTargets)) {
+                                        if (isset($savedTargets[$indicatorName])) {
+                                            $targetVal = $savedTargets[$indicatorName];
+                                        } 
+                                        // Fuzzy search sederhana jika key tidak persis sama
+                                        else {
+                                             foreach($savedTargets as $key => $val) {
+                                                 // Cek jika nama indikator mengandung key atau sebaliknya (case insensitive)
+                                                 if (str_contains(strtolower($indicatorName), strtolower($key)) || str_contains(strtolower($key), strtolower($indicatorName))) {
+                                                     $targetVal = $val;
+                                                     break;
+                                                 }
+                                             }
+                                        }
+                                    } 
+                                    // 2. Fallback: Jika Master kosong, pakai data lama yang tersimpan di database Laporan
+                                    elseif ($detail) {
+                                        $targetVal = $detail->target_sasaran;
+                                    }
                                 @endphp
                                 <tr>
                                     <td style="vertical-align: middle;">
                                         {{ $indicatorName }}
                                         {{-- Simpan ID detail jika ada, penting untuk proses update --}}
-                                        {{-- Nama indikator juga dikirim ulang --}}
-                                        <input type="hidden" name="details[{{ $index }}][id]" value="{{ $detail ? $detail->id : '' }}"> {{-- Kosong jika indikator baru --}}
+                                        <input type="hidden" name="details[{{ $index }}][id]" value="{{ $detail ? $detail->id : '' }}">
                                         <input type="hidden" name="details[{{ $index }}][indikator_name]" value="{{ $indicatorName }}">
                                     </td>
                                     <td>
-                                        <input type="number" class="form-control form-control-sm @error('details.'.$index.'.target_sasaran') is-invalid @enderror"
+                                        {{-- INPUT TARGET DIKUNCI (READONLY) --}}
+                                        {{-- Style background abu-abu ditambahkan agar terlihat 'disabled' --}}
+                                        <input type="number" 
+                                               class="form-control form-control-sm text-center bg-gray-200" 
+                                               style="background-color: #eaecf4; color: #6e707e; font-weight: bold; cursor: not-allowed;"
                                                name="details[{{ $index }}][target_sasaran]"
-                                               value="{{ old('details.'.$index.'.target_sasaran', $detail ? $detail->target_sasaran : '') }}" {{-- Ambil dari $detail --}}
-                                               placeholder="0"
-                                               min="0">
+                                               value="{{ $targetVal }}"
+                                               readonly
+                                               tabindex="-1">
                                     </td>
 
                                     {{-- Loop untuk 12 bulan --}}
@@ -128,7 +162,7 @@
                                     <td>
                                         <input type="number" class="form-control form-control-sm text-center @error('details.'.$index.'.bln_'.$i) is-invalid @enderror"
                                                name="details[{{ $index }}][bln_{{ $i }}]"
-                                               value="{{ old('details.'.$index.'.bln_'.$i, $detail ? $detail['bln_'.$i] : 0) }}" {{-- Ambil dari $detail --}}
+                                               value="{{ old('details.'.$index.'.bln_'.$i, $detail ? $detail['bln_'.$i] : 0) }}"
                                                placeholder="0"
                                                min="0">
                                     </td>
@@ -144,16 +178,13 @@
         </div>
     </div>
 
-    {{-- =============================================== --}}
-    {{-- == BAGIAN BARU: KETERANGAN TAMBAHAN == --}}
-    {{-- =============================================== --}}
+    {{-- Bagian Keterangan Tambahan --}}
     <div class="card shadow mb-4">
         <div class="card-header py-3">
             <h6 class="m-0 font-weight-bold text-primary">Keterangan Tambahan</h6>
         </div>
         <div class="card-body">
             <div class="form-group">
-                {{-- Gunakan old() dan $laporan->keterangan --}}
                 <textarea name="keterangan" id="keterangan" rows="4" class="form-control @error('keterangan') is-invalid @enderror" placeholder="Masukkan keterangan tambahan jika ada...">{{ old('keterangan', $laporan->keterangan) }}</textarea>
                 @error('keterangan')
                     <div class="invalid-feedback">{{ $message }}</div>
@@ -161,8 +192,6 @@
             </div>
         </div>
     </div>
-    {{-- =============================================== --}}
-
 
     <div class="d-flex justify-content-end mb-4">
         <a href="{{ route('rekap.index') }}" class="btn btn-secondary me-2">Batal</a>
