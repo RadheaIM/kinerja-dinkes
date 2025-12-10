@@ -190,6 +190,16 @@
              .sidebar-toggled .main-content { margin-left: 0; }
         }
 
+        /* ===== START PERBAIKAN RESPONSIVE MOBILE ===== */
+        @media (max-width: 767.98px) {
+            /* Pastikan main-content tidak ada margin kiri di layar kecil */
+            .main-content {
+                margin-left: 0 !important;
+                padding-top: 10px; /* Kurangi padding atas agar lebih rapat */
+            }
+        }
+        /* ===== END PERBAIKAN RESPONSIVE MOBILE ===== */
+
         .user-info { display: flex; align-items: center; gap: 10px; }
         .user-info img { border: 2px solid #e2e8f0; width: 35px; height: 35px; }
         .user-info span { font-weight: 500; color: #5a5c69; font-size: 0.9rem; }
@@ -302,7 +312,7 @@
     {{-- 1. JQUERY (Untuk compatibility, biasanya harus di atas) --}}
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
     
-    {{-- 2. BOOTSTRAP JS (PENTING! BARIS INI MENYEBABKAN DROPDOWN TIDAK JALAN) --}}
+    {{-- 2. BOOTSTRAP JS (PENTING! UNTUK DROPDOWN, MODAL, COLLAPSE) --}}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 
     {{-- 3. APP JS dari Vite --}}
