@@ -1,14 +1,12 @@
 <nav class="sidebar">
-    {{-- Header Sidebar: Diperkecil Marginnya (mb-4 jadi mb-3/mb-2) --}}
+    {{-- Header Sidebar --}}
     <a href="{{ route('dashboard') }}" class="text-center mb-3 d-block text-white text-decoration-none">
-        {{-- class sidebar-icon-header untuk dikontrol CSS --}}
         <i class="fa-solid fa-heart-pulse fa-lg sidebar-icon-header"></i> 
         <br>
-        {{-- class sidebar-header-text untuk dikontrol CSS --}}
         <h6 class="fw-bold mb-0 sidebar-header-text">LAPORAN KINERJA <br> PUSKESMAS & LABKESDA</h6>
     </a>
 
-    {{-- Garis pembatas tipis --}}
+    {{-- Garis pembatas --}}
     <hr class="bg-white opacity-25 mt-0 mb-2">
 
     @auth
@@ -165,11 +163,11 @@
 
         @if(Auth::user()->role === 'admin')
             <li class="nav-item {{ Request::routeIs('target.*') ? 'active' : '' }}">
-    <a class="nav-link" href="{{ route('target.create') }}">
-        <i class="fas fa-fw fa-bullseye"></i>
-        <span>Manajemen Target</span>
-    </a>
-</li>
+                <a class="nav-link" href="{{ route('target.create') }}">
+                    <i class="fas fa-fw fa-bullseye"></i>
+                    <span>Manajemen Target</span>
+                </a>
+            </li>
             <li class="nav-item">
                 <a class="nav-link" href="{{ route('manajemen-user.index') }}">
                     <i class="fas fa-users-cog me-2"></i>
@@ -179,9 +177,15 @@
         @endif
 
         <li class="nav-item">
-            <a href="#" class="nav-link text-white opacity-75 hover-danger" data-bs-toggle="modal" data-bs-target="#logoutModal">
+            <a class="nav-link text-white opacity-75 hover-danger" href="{{ route('logout') }}"
+               onclick="event.preventDefault(); document.getElementById('logout-form').submit();"
+               style="cursor: pointer;">
                 <i class="fa-solid fa-right-from-bracket me-2"></i> Logout
             </a>
+            
+            <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
+                @csrf
+            </form>
         </li>
     </ul>
     @endauth
