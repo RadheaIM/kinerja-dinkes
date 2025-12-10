@@ -50,22 +50,22 @@
 
         /* --- COMPACT SIDEBAR STYLES (Agar Muat Banyak Menu) --- */
         .sidebar .nav-link {
-            font-size: 0.9rem !important;       /* Perkecil font menu */
-            padding-top: 0.5rem !important;     /* Kurangi padding atas */
-            padding-bottom: 0.5rem !important;  /* Kurangi padding bawah */
+            font-size: 0.9rem !important; 	/* Perkecil font menu */
+            padding-top: 0.5rem !important; 	/* Kurangi padding atas */
+            padding-bottom: 0.5rem !important; 	/* Kurangi padding bawah */
         }
         
         .sidebar .nav-item {
-            margin-bottom: 0.25rem !important;  /* Kurangi jarak antar menu */
+            margin-bottom: 0.25rem !important; 	/* Kurangi jarak antar menu */
         }
 
         .sidebar .sidebar-header-text {
-            font-size: 0.85rem !important;      
+            font-size: 0.85rem !important; 	
             line-height: 1.2;
         }
 
         .sidebar .sidebar-icon-header {
-            font-size: 1.2rem !important;       
+            font-size: 1.2rem !important; 	
             margin-bottom: 0.5rem !important;
         }
 
@@ -297,7 +297,15 @@
         </div>
     </div>
 
+    {{-- SCRIPTS --}}
+    
+    {{-- 1. JQUERY (Untuk compatibility, biasanya harus di atas) --}}
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    
+    {{-- 2. BOOTSTRAP JS (PENTING! BARIS INI MENYEBABKAN DROPDOWN TIDAK JALAN) --}}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+
+    {{-- 3. APP JS dari Vite --}}
     @vite(['resources/js/app.js']) 
     
     <script>
