@@ -199,11 +199,11 @@
             }
         }
         .offcanvas-body { 
-            padding: 0 !important; /* <--- Hapus padding offcanvas body (Fix Garis Putih) */
+            padding: 0 !important; /* Hapus padding offcanvas body (Fix Garis Putih) */
             overflow-y: auto; 
         }
         .offcanvas-body .sidebar { 
-            width: 100%; /* <--- Pastikan sidebar memenuhi body offcanvas */
+            width: 100%; /* Pastikan sidebar memenuhi body offcanvas */
         }
         /* ===== END PERBAIKAN RESPONSIVE MOBILE ===== */
 
@@ -316,10 +316,10 @@
 
     {{-- SCRIPTS --}}
     
-    {{-- 1. JQUERY (Untuk compatibility, harus di atas) --}}
+    {{-- 1. JQUERY (Kita biarkan, karena banyak komponen lain mungkin membutuhkannya) --}}
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
     
-    {{-- 2. BOOTSTRAP JS (PENTING! UNTUK DROPDOWN, MODAL, COLLAPSE) --}}
+    {{-- 2. BOOTSTRAP JS (PENTING! Sumber fungsi Collapse/Toggle) --}}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 
     {{-- 3. APP JS dari Vite --}}
@@ -330,6 +330,7 @@
             const toggleButton = document.getElementById('sidebarToggle');
             const body = document.querySelector('body');
             
+            // Logika Toggle Sidebar Desktop
             if (localStorage.getItem('sidebarStatus') === 'toggled') {
                 body.classList.add('sidebar-toggled');
             }
@@ -345,13 +346,8 @@
                 });
             }
 
-            // PERBAIKAN DROPDOWN TOGGLE (Buka dan Tutup)
-            // Memaksa fungsi toggle pada elemen collapse dengan jQuery
-            $('a[data-bs-toggle="collapse"]').on('click', function (e) {
-                e.preventDefault(); 
-                var target = $(this).attr('data-bs-target');
-                $(target).collapse('toggle');
-            });
+            // TIDAK ADA KODE JQUERY TAMBAHAN UNTUK DROPDOWN COLLAPSE DI SINI.
+            // Biarkan Bootstrap 5 mengurusnya secara NATIVE.
         });
     </script>
     @stack('scripts')
