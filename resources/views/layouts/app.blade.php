@@ -316,7 +316,7 @@
 
     {{-- SCRIPTS --}}
     
-    {{-- 1. JQUERY (Untuk compatibility, biasanya harus di atas) --}}
+    {{-- 1. JQUERY (Untuk compatibility, harus di atas) --}}
     <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
     
     {{-- 2. BOOTSTRAP JS (PENTING! UNTUK DROPDOWN, MODAL, COLLAPSE) --}}
@@ -344,6 +344,14 @@
                     }
                 });
             }
+
+            // PERBAIKAN DROPDOWN TOGGLE (Buka dan Tutup)
+            // Memaksa fungsi toggle pada elemen collapse dengan jQuery
+            $('a[data-bs-toggle="collapse"]').on('click', function (e) {
+                e.preventDefault(); 
+                var target = $(this).attr('data-bs-target');
+                $(target).collapse('toggle');
+            });
         });
     </script>
     @stack('scripts')
