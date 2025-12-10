@@ -46,7 +46,9 @@
 
         {{-- Laporan Kinerja Dropdown --}}
         <li class="nav-item">
-            <a data-bs-toggle="collapse" data-bs-target="#laporanKinerjaMenu"
+            <a data-bs-toggle="collapse" 
+               data-bs-target="#laporanKinerjaMenu"
+               aria-controls="laporanKinerjaMenu" 
                 class="nav-link {{ request()->routeIs('laporan-kinerja.*') ? 'fw-bold' : '' }}"
                 aria-expanded="{{ request()->routeIs('laporan-kinerja.*') ? 'true' : 'false' }}"
                 style="cursor: pointer;">
@@ -99,7 +101,9 @@
 
         {{-- Administrasi & TU Dropdown --}}
         <li class="nav-item">
-            <a data-bs-toggle="collapse" data-bs-target="#adminTuMenu"
+            <a data-bs-toggle="collapse" 
+               data-bs-target="#adminTuMenu"
+               aria-controls="adminTuMenu" 
                 class="nav-link {{ request()->routeIs('administrasi-tu.*') ? 'fw-bold' : '' }}"
                 aria-expanded="{{ request()->routeIs('administrasi-tu.*') ? 'true' : 'false' }}"
                 style="cursor: pointer;">
@@ -178,8 +182,8 @@
 
         <li class="nav-item">
             <a class="nav-link text-white opacity-75 hover-danger" href="{{ route('logout') }}"
-               onclick="event.preventDefault(); document.getElementById('logout-form').submit();"
-               style="cursor: pointer;">
+                onclick="event.preventDefault(); document.getElementById('logout-form').submit();"
+                style="cursor: pointer;">
                 <i class="fa-solid fa-right-from-bracket me-2"></i> Logout
             </a>
             

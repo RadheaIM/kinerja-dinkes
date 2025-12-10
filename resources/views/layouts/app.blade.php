@@ -190,13 +190,20 @@
              .sidebar-toggled .main-content { margin-left: 0; }
         }
 
-        /* ===== START PERBAIKAN RESPONSIVE MOBILE ===== */
+        /* ===== START PERBAIKAN RESPONSIVE MOBILE (Garis Putih & Margin) ===== */
         @media (max-width: 767.98px) {
             /* Pastikan main-content tidak ada margin kiri di layar kecil */
             .main-content {
                 margin-left: 0 !important;
-                padding-top: 10px; /* Kurangi padding atas agar lebih rapat */
+                padding-top: 10px; 
             }
+        }
+        .offcanvas-body { 
+            padding: 0 !important; /* <--- Hapus padding offcanvas body (Fix Garis Putih) */
+            overflow-y: auto; 
+        }
+        .offcanvas-body .sidebar { 
+            width: 100%; /* <--- Pastikan sidebar memenuhi body offcanvas */
         }
         /* ===== END PERBAIKAN RESPONSIVE MOBILE ===== */
 
